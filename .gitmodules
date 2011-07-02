@@ -1,0 +1,3 @@
+[submodule "kv55"]
+	path = kv55
+	url = git://vo20.nl/openov.git
