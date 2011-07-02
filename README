@@ -1,0 +1,5 @@
+To check out all submodules;
+
+for proj in kv55 ; do
+	(cd $proj; git submodule init; git submodule update)
+done
