@@ -140,8 +140,8 @@ for modality, modality_name in modalities.items():
         for option in datelist.findAll('option'):
             dateparts = transformdate.match(option.text)
             thisdate = datetime.date(int(dateparts.group(3)), int(dateparts.group(2)), int(dateparts.group(1)))
-    #        if thisdate >= today:
-            if thisdate == today:
+            if thisdate >= today and thisdate.day < 15: # 15 vanwege lijn 92
+    #        if thisdate == today:
                 dates[option['value']] = '%.4d%.2d%.2d'%(int(dateparts.group(3)), int(dateparts.group(2)), int(dateparts.group(1)))
 
         calendarresults = {}
@@ -211,6 +211,9 @@ for modality, modality_name in modalities.items():
                                 tripids.add(tripid)
 
                                 for trip in v:
+                                    if trip[2] in ['Melanchtonweg IP', 'Tussenwater Ca']: # Zijn beide technische stops, geen echte data, skippen dus
+                                        continue
+
                                     if not linenumber.isdigit():
                                         needle = linenumber+'_'+trip[2]
                                     else:
