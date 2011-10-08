@@ -121,55 +121,56 @@ tripstxt = open('%s/trips.txt'%(operator), 'w')
 tripstxt.write('route_id,service_id,trip_id,trip_headsign,trip_short_name,direction_id,block_id,shape_id\n')
 
 lasttripid = 0
+dates = {}
+
+response, content = h.request("http://www.ret.nl/reizen-met-ret/dienstregeling/Metro.aspx")
+if response['status'] == '200':
+    tmp(content, operator, 'M')
+    soup = BeautifulSoup(content)
+    datelist = soup.findAll(id='plhmiddle_0_plhcontent_0_ddlDate')[0]
+    today = datetime.date.today()
+    for option in datelist.findAll('option'):
+        dateparts = transformdate.match(option.text)
+        thisdate = datetime.date(int(dateparts.group(3)), int(dateparts.group(2)), int(dateparts.group(1)))
+        if thisdate >= today and thisdate.day < 15: # 15 vanwege lijn 92, haltes nog onbekend
+            dates[int(option['value'])] = '%.4d%.2d%.2d'%(int(dateparts.group(3)), int(dateparts.group(2)), int(dateparts.group(1)))
+
+sorted(dates)
+calendarresults = {}
+start_date = min(dates.values())
+end_date = max(dates.values())
 
 modalities = {'T': 'tram', 'B': 'bus', 'M': 'metro'}
-for modality, modality_name in modalities.items():
+directions = {'To': 0, 'Return': 1}
 
-    response, content = h.request("http://www.ret.nl/reizen-met-ret/dienstregeling/%s.aspx"%(modality_name))
-    if response['status'] == '200':
-        tmp(content, operator, modality)
-        headers['Cookie'] = response['set-cookie']
-    #if True:
-    #    content = incache(operator, modality) 
+for (internal, datum) in dates.items():
+    print 'Verwerken... %s'%(datum)
 
+    for modality, modality_name in modalities.items():
+        response, content = h.request("http://www.ret.nl/reizen-met-ret/dienstregeling/%s.aspx"%(modality_name))
+        if response['status'] == '200':
+            tmp(content, operator, modality)
+            headers['Cookie'] = response['set-cookie']
 
-        soup = BeautifulSoup(content)
-        datelist = soup.findAll(id='plhmiddle_0_plhcontent_0_ddlDate')[0]
-        dates = {}
-        today = datetime.date.today()
-        for option in datelist.findAll('option'):
-            dateparts = transformdate.match(option.text)
-            thisdate = datetime.date(int(dateparts.group(3)), int(dateparts.group(2)), int(dateparts.group(1)))
-            if thisdate >= today and thisdate.day < 15: # 15 vanwege lijn 92
-    #        if thisdate == today:
-                dates[option['value']] = '%.4d%.2d%.2d'%(int(dateparts.group(3)), int(dateparts.group(2)), int(dateparts.group(1)))
+            soup = BeautifulSoup(content)
 
-        calendarresults = {}
-        start_date = min(dates.values())
-        end_date = max(dates.values())
+            viewstate = soup.findAll(id="__VIEWSTATE")[0]['value']
+            eventvalidation = soup.findAll(id="__EVENTVALIDATION")[0]['value']
+            headers['X-MicrosoftAjax'] = 'Delta=true'
+            headers['Content-type'] = 'application/x-www-form-urlencoded'
 
-        viewstate = soup.findAll(id="__VIEWSTATE")[0]['value']
-        eventvalidation = soup.findAll(id="__EVENTVALIDATION")[0]['value']
-        headers['X-MicrosoftAjax'] = 'Delta=true'
-        headers['Content-type'] = 'application/x-www-form-urlencoded'
+            offset = '0'
+            last = None
 
-        offset = '0'
-        last = None
-        directions = {'To': 0, 'Return': 1}
+            linelist = soup.findAll(id='plhmiddle_0_plhcontent_0_ddlLine')[0]
+            for line in linelist.findAll('option'):
+                linenumber = line.text.split(' ')[1].replace('/','_')
+                lineid     = line['value']
 
-        linelist = soup.findAll(id='plhmiddle_0_plhcontent_0_ddlLine')[0]
-        for line in linelist.findAll('option'):
-            linenumber = line.text.split(' ')[1].replace('/','_')
-            lineid     = line['value']
+                for direction in directions.keys():
 
-                
-
-            for direction in directions.keys():
-
-                calendar = {0: False, 1: False, 2: False, 3: False, 4: False, 5: False, 6: False}
-                tripids = set()
-
-                for (internal, datum) in dates.items():
+                    calendar = {0: False, 1: False, 2: False, 3: False, 4: False, 5: False, 6: False}
+                    tripids = set()
 
                     while True:
                         cached = incache2(operator, modality, lineid, str(directions[direction]), datum, offset)
@@ -239,6 +240,6 @@ for modality, modality_name in modalities.items():
                         # helemaal geen tijden => volgende dag
                         # lege kolom => volgende dag
                         # anders: laagste tijd in de vierde kolom in uren = timeoffset
-                for tripid in tripids:
-                    trips(lineid, calendarmagic(calendar, start_date, end_date), str(tripid), '', '', str(directions[direction]), '', '')
+                    for tripid in tripids:
+                        trips(lineid, calendarmagic(calendar, start_date, end_date), str(tripid), '', '', str(directions[direction]), '', '')
 
