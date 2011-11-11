@@ -12,7 +12,6 @@ output = '<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://earth.google.
 
 for (root, dirs, files) in os.walk('xml_polyline'):
     for f in files:
-        print f
         x = ET.parse('%s/%s'%('xml_polyline', f)).getroot()
         polyline = x.find('.//PolyLine').text
         polyline = decode_line(polyline)
