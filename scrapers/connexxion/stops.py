@@ -4,7 +4,10 @@ import codecs
 import sys
 
 f = codecs.open(sys.argv[1], encoding='utf-8', mode='r')
-j = json.load(f)
+content = f.read()
+f.close()
+content = '{'+content.split('>{')[1].split('}<')[0]+'}'
+j = json.loads(content)
 
 o = codecs.open('connexxion.kml', encoding='utf-8', mode='w')
 o.write('<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://earth.google.com/kml/2.2"><Document>')
